@@ -1,0 +1,30 @@
+version: "3"
+services:
+  micro_data_base_service:
+    image: rkrisanoff/micro_data_base_service-0.9.1
+    network_mode: host
+    command: [
+      "--spring.jpa.generate-ddl=true",
+      "--spring.jpa.hibernate.ddl-auto=update",
+      "--spring.datasource.url=jdbc:postgresql://localhost:5432/dma-test",
+      "--spring.jpa.properties.hibernate.default_schema=studhelper",
+      "--spring.datasource.username=drukhary",
+      "--spring.datasource.password=142857",
+      "--spring.data.redis.host=localhost",
+      "--spring.data.redis.port=6379",
+    ]
+    container_name: micro_data_base_service
+    depends_on:
+      - redis
+  api_gateway_service:
+    image: rkrisanoff/api_gateway
+    network_mode: host
+    container_name: api_gateway_service
+    depends_on:
+      - micro_data_base_service
+      - redis
+  redis:
+    image: "redis:alpine"
+    container_name: "redis"
+    ports:
+      - "6379:6379"
