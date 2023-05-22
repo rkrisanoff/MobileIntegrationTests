@@ -237,6 +237,9 @@ class ApiTestGroups(ApiTest):
 
 @pytest.mark.order(after="ApiTestGroups")
 class ApiTestQueue(ApiTest):
+    """
+    Test for Queues
+    """
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -267,7 +270,7 @@ class ApiTestQueue(ApiTest):
                                      auth=(user_creds["login"], user_creds["password"]),
                                      json={"queueName": "CoolQueue"}
                                      )
-            assert response.status_code != 200
+            self.assertNotEqual(response.status_code, 200, "wrong ")
 
     def test_create_queue(self):
         response = requests.post(url=f"{api_base}/group/queues",
@@ -311,6 +314,7 @@ class ApiTestQueue(ApiTest):
                                       json={}
                                       )
             assert response.status_code == 200
+
     @pytest.mark.order(after="ApiTestQueue::test_quit_queue")
     def test_quit_queue_failure(self):
         response = requests.get(url=f"{api_base}/group/queues",
@@ -327,6 +331,49 @@ class ApiTestQueue(ApiTest):
                                       json={}
                                       )
             assert response.status_code != 200
+
+    @pytest.mark.order(after="ApiTestQueue::test_quit_queue_failure")
+    def test_get_student_in_queue_list(self):
+        response = requests.get(url=f"{api_base}/group/queues/{1}",
+                                headers={**base_headers},
+                                auth=(users[0]["login"], users[0]["password"]),
+                                )
+
+        self.assertEqual(response.status_code, 200)
+        queue_creds = response.json()
+        self.assertEqual(queue_creds["queueId"], 1)
+        self.assertEqual(queue_creds["queueName"], "CoolQueue")
+        for user in queue_creds["users"]:
+            self.assertEqual(users[user["id"] - 1]["fullName"], user["fullName"])
+
+    @pytest.mark.order(after="ApiTestQueue::test_get_student_in_queue_list")
+    def test_get_queues_in_group_list(self):
+        response = requests.get(url=f"{api_base}/group/queues",
+                                headers={**base_headers},
+                                auth=(users[0]["login"], users[0]["password"]),
+                                )
+        self.assertEqual(response.status_code, 200)
+        queues = response.json()["queueList"]
+        self.assertGreater(len(queues), 0)
+
+    @pytest.mark.order(after="ApiTestQueue::test_get_queues_in_group_list")
+    def test_delete_queues(self):
+        response = requests.delete(url=f"{api_base}/group/queues/{1}",
+                                   headers={**base_headers},
+                                   auth=(users[0]["login"], users[0]["password"]),
+                                   )
+
+        self.assertEqual(response.status_code, 200)
+
+    @pytest.mark.order(after="ApiTestQueue::test_delete_queues")
+    def test_get_queues_in_group_empty_list(self):
+        response = requests.get(url=f"{api_base}/group/queues",
+                                headers={**base_headers},
+                                auth=(users[0]["login"], users[0]["password"]),
+                                )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()["queueList"]), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
